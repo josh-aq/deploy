@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventIntel - Event Coordinators</title>
+    <link rel="stylesheet" href="{{ asset('css/fontawesome.min.css') }}"><link rel="stylesheet" href="{{ asset('css/userui/navbar.css') }}"><link rel="icon" href="data:,">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0}body{min-height:100vh;background:#f8f8f8;color:#111;font-family:'Segoe UI',sans-serif}.page{width:100%;min-height:100vh;padding:6px 48px 40px;position:relative}.heading{display:flex;justify-content:space-between;align-items:end;gap:24px;margin:28px 0}.heading h1{font-size:clamp(36px,5vw,56px);margin:0 0 12px}.heading p{color:#666;max-width:700px;line-height:1.7}.search{width:340px;padding:16px 18px;border:1px solid #eadcae;border-radius:18px;background:#fff;font-size:14px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}.card{background:#fff;border:1px solid #eee2b7;border-radius:24px;overflow:hidden;box-shadow:0 14px 35px #0000000d}.card-image{height:260px;position:relative;background:#f3c547}.card-image img{width:100%;height:100%;object-fit:cover}.badge{position:absolute;top:16px;right:16px;padding:8px 14px;border-radius:999px;background:#fff1b8;color:#9b7100;font-size:12px;font-weight:700}.content{padding:24px}.content h2{margin:0 0 8px}.business{color:#b07c00;font-size:13px;font-weight:700;margin-bottom:12px}.details{display:flex;gap:18px;color:#666;font-size:14px;margin-bottom:16px}.content p{color:#777;line-height:1.6;min-height:52px}.footer{display:flex;justify-content:space-between;align-items:center;gap:12px}.price{color:#b07c00;font-size:21px;font-weight:800}.select{padding:12px 20px;border-radius:12px;background:#f3c547;color:#111;text-decoration:none;font-weight:800}@media(max-width:950px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.page{padding:6px 18px 30px}.heading{display:block}.search{width:calc(100% - 36px);margin-top:12px}.grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body><div class="page">
+    @include('userui.partials.navbar')
+    <header class="heading"><div><h1>Select Event Coordinator</h1><p>Choose a professional coordinator to manage your event from planning to execution.</p></div><input class="search" id="coordinatorSearch" type="search" placeholder="Search coordinator or specialty..." aria-label="Search coordinators"></header>
+    <main class="grid" id="coordinatorGrid">
+        @forelse ($coordinators as $coordinator)
+            <article class="card" data-search="{{ strtolower($coordinator->full_name . ' ' . ($coordinator->business_name ?? '') . ' ' . ($coordinator->business_address ?? '')) }}"><div class="card-image"><span class="badge">Professional</span><img src="{{ asset('images/userui/logo.png') }}" alt="{{ $coordinator->full_name }}"></div><div class="content"><h2>{{ $coordinator->full_name }}</h2>@if($coordinator->business_name)<div class="business">{{ $coordinator->business_name }}</div>@endif<div class="details"><span><i class="fas fa-star"></i> {{ number_format((float)$coordinator->avg_rating, 1) }} ({{ $coordinator->total_reviews }})</span><span><i class="fas fa-box"></i> {{ $coordinator->total_packages }} Packages</span></div><p>{{ $coordinator->business_address ?: 'Professional event coordinator with extensive experience in managing all types of events.' }}</p><div class="footer"><span class="price">{{ $coordinator->min_package ? '₱' . number_format((float)$coordinator->min_package) : 'View Profile' }}</span><a class="select" href="{{ route('coordinators.show', $coordinator->user_id) }}">Select</a></div></div></article>
+        @empty
+            <p>No coordinators are available yet.</p>
+        @endforelse
+    </main>
+</div><script>document.getElementById('coordinatorSearch').addEventListener('input',function(){const term=this.value.toLowerCase();document.querySelectorAll('.card').forEach(card=>card.hidden=!card.dataset.search.includes(term));});</script></body></html>

@@ -27,7 +27,7 @@
                         <option value="{{ $type }}" @selected($eventKey === strtolower($type))>{{ $type }}</option>
                     @endforeach
                 </select>
-                <a class="packages-back" href="{{ route('coordinator.events') }}">Back to Create Event</a>
+                <a class="packages-back" href="{{ route('events.create') }}">Back to Create Event</a>
             </form>
 
             <section class="packages-grid" aria-label="Available packages">
@@ -102,7 +102,7 @@
 
     <script>
         const allocation = @json($allocation);
-        const chooseEventUrl = @json(route('coordinator.events'));
+        const chooseEventUrl = @json(route('events.create'));
 
         function choosePackage(button) {
             const services = JSON.parse(button.dataset.services || '[]');

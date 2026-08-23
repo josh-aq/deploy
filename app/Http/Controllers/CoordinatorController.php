@@ -15,9 +15,59 @@ class CoordinatorController extends Controller
     {
         $this->middleware('auth');
         $this->middleware(function ($request, $next) {
-            abort_unless(Auth::user()->role === 'coordinator', 403, 'Coordinator access only.');
+            abort_unless(Auth::user()->role === 'coordinator' || ($request->routeIs('coordinators.*') && Auth::user()->role === 'client'), 403, 'Coordinator access only.');
             return $next($request);
         });
+    }
+
+    public function clientIndex()
+    {
+        $coordinators = DB::table('users as u')->where('u.role', 'coordinator')->when(Schema::hasTable('coordinator_reviews'), function ($query) {
+            $query->select('u.*', DB::raw('(SELECT COALESCE(AVG(rating), 0) FROM coordinator_reviews WHERE coordinator_id = u.user_id) as avg_rating'), DB::raw('(SELECT COUNT(*) FROM coordinator_reviews WHERE coordinator_id = u.user_id) as total_reviews'));
+        }, function ($query) {
+            $query->select('u.*', DB::raw('0 as avg_rating'), DB::raw('0 as total_reviews'));
+        })->orderBy('u.full_name')->get();
+        foreach ($coordinators as $coordinator) {
+            $packages = Schema::hasTable('coordinator_packages') ? DB::table('coordinator_packages')->where('coordinator_id', $coordinator->user_id) : null;
+            $coordinator->total_packages = $packages?->count() ?? 0;
+            $coordinator->min_package = $packages?->min('price');
+        }
+        return view('userui.event-coordinators', compact('coordinators'));
+    }
+
+    public function clientShow(int $coordinatorId)
+    {
+        $coordinator = DB::table('users')->where('user_id', $coordinatorId)->where('role', 'coordinator')->first();
+        abort_unless((bool) $coordinator, 404);
+        $profile = Schema::hasTable('coordinator_profile') ? DB::table('coordinator_profile')->where('coordinator_id', $coordinatorId)->first() : null;
+        $packages = Schema::hasTable('coordinator_packages') ? DB::table('coordinator_packages')->where('coordinator_id', $coordinatorId)->orderByDesc('is_featured')->orderBy('price')->get() : collect();
+        $gallery = Schema::hasTable('coordinator_gallery') ? DB::table('coordinator_gallery')->where('coordinator_id', $coordinatorId)->orderByDesc('created_at')->get() : collect();
+        $reviews = Schema::hasTable('coordinator_reviews') ? DB::table('coordinator_reviews as reviews')->leftJoin('users', 'reviews.user_id', '=', 'users.user_id')->where('reviews.coordinator_id', $coordinatorId)->select('reviews.*', 'users.full_name as reviewer_name')->orderByDesc('reviews.created_at')->get() : collect();
+        $avgRating = $reviews->avg('rating');
+        $services = array_values(array_filter(array_map('trim', explode('|', (string) ($profile->services ?? '')))));
+        if ($services === []) $services = ['Wedding Planning', 'Corporate Events', 'Birthday Parties', 'Full Coordination', 'On-the-day Coordination'];
+        return view('userui.orgbio', compact('coordinator', 'profile', 'packages', 'gallery', 'reviews', 'avgRating', 'services'));
+    }
+
+    public function clientBook(Request $request, int $coordinatorId)
+    {
+        $coordinator = DB::table('users')->where('user_id', $coordinatorId)->where('role', 'coordinator')->first();
+        abort_unless((bool) $coordinator, 404);
+        $data = $request->validate(['coordinator_package' => ['required', 'string', 'max:255']]);
+        if (Schema::hasTable('coordinator_packages') && !DB::table('coordinator_packages')->where('coordinator_id', $coordinatorId)->where('name', $data['coordinator_package'])->exists()) return back()->withErrors(['coordinator_package' => 'That package is no longer available.']);
+        DB::table('events')->insert(['user_id' => Auth::id(), 'coordinator' => $coordinator->full_name, 'coordinator_status' => 'pending', 'status' => 'planning', 'coordinator_package' => $data['coordinator_package'], 'created_at' => now()]);
+        return redirect()->route('your.events')->with('success', 'Booking confirmed. The coordinator has been added to your event.');
+    }
+
+    public function clientCustomBooking(Request $request, int $coordinatorId)
+    {
+        $coordinator = DB::table('users')->where('user_id', $coordinatorId)->where('role', 'coordinator')->first();
+        abort_unless((bool) $coordinator, 404);
+        abort_unless(Schema::hasTable('custom_event_requests'), 503, 'Custom booking is not available yet.');
+        $data = $request->validate(['event_type' => ['required', 'string', 'max:100'], 'event_date' => ['required', 'date'], 'venue_preference' => ['nullable', 'string', 'max:255'], 'guest_count' => ['nullable', 'integer', 'min:1'], 'theme' => ['nullable', 'string', 'max:120'], 'budget' => ['nullable', 'numeric', 'min:0'], 'required_services' => ['nullable', 'string', 'max:1000'], 'special_requests' => ['nullable', 'string', 'max:5000'], 'additional_notes' => ['nullable', 'string', 'max:5000']]);
+        $eventId = DB::table('events')->insertGetId(['user_id' => Auth::id(), 'title' => $data['event_type'] . ' Event (Custom)', 'event_type' => $data['event_type'], 'theme' => $data['theme'] ?? null, 'budget' => $data['budget'] ?? null, 'event_date' => $data['event_date'], 'guest_count' => $data['guest_count'] ?? null, 'coordinator' => $coordinator->full_name, 'coordinator_package' => '', 'coordinator_status' => 'pending', 'status' => 'planning', 'created_at' => now()]);
+        DB::table('custom_event_requests')->insert(['event_id' => $eventId, 'client_id' => Auth::id(), 'coordinator_id' => $coordinatorId, 'event_type' => $data['event_type'], 'event_date' => $data['event_date'], 'venue_preference' => $data['venue_preference'] ?? null, 'guest_count' => $data['guest_count'] ?? null, 'theme' => $data['theme'] ?? null, 'budget' => $data['budget'] ?? null, 'required_services' => $data['required_services'] ?? null, 'special_requests' => $data['special_requests'] ?? null, 'additional_notes' => $data['additional_notes'] ?? null, 'status' => 'pending']);
+        return redirect()->route('your.events')->with('success', 'Custom event request sent to ' . $coordinator->full_name . '.');
     }
 
     public function dashboard()
@@ -42,7 +92,11 @@ class CoordinatorController extends Controller
     public function updateEvent(Request $request, $eventId)
     {
         $action = $request->validate(['action' => ['required', 'in:accepted,declined,paid']])['action'];
-        $status = $action === 'paid' ? 'Paid' : $action;
+        $status = match ($action) {
+            'accepted' => 'Payment Pending',
+            'paid' => 'Paid',
+            default => $action,
+        };
         DB::table('events')->where('event_id', $eventId)->where('coordinator', Auth::user()->full_name)->update(['coordinator_status' => $status]);
         return back()->with('success', 'Event status updated.');
     }

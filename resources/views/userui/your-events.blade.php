@@ -79,35 +79,117 @@
         </div>
     </div>
 
+    <div class="events-modal" id="paymentModal" aria-hidden="true">
+        <div class="events-modal-content" style="max-width:560px;">
+            <header><h2><i class="fas fa-coins" style="color:#f3c547;"></i> Pay for Service</h2><button type="button" data-close-payment>&times;</button></header>
+            <div style="padding:16px;border-radius:14px;background:rgba(243,197,71,.08);border:1px solid rgba(243,197,71,.25);margin-bottom:18px;">
+                <div style="font-size:14px;color:#666;">Service</div>
+                <div id="payServiceName" style="font-size:18px;font-weight:700;color:#111;margin-bottom:6px;"></div>
+                <div style="font-size:14px;color:#666;">Amount</div>
+                <div id="payAmount" style="font-size:28px;font-weight:800;color:#f3c547;"></div>
+            </div>
+            <p style="font-size:14px;color:#555;margin-bottom:14px;">Choose how you would like to pay this supplier:</p>
+            <label style="display:flex;gap:12px;align-items:center;padding:16px;border:2px solid rgba(243,197,71,.2);border-radius:14px;margin-bottom:10px;cursor:pointer;background:#fafafa;">
+                <input type="radio" name="payment_method_choice" value="cash" style="width:18px;height:18px;accent-color:#f3c547;">
+                <i class="fas fa-money-bill-wave" style="font-size:22px;color:#f3c547;"></i>
+                <span><strong>Cash Payment</strong><small style="display:block;color:#888;">Pay directly on the day of the event</small></span>
+            </label>
+            <label style="display:flex;gap:12px;align-items:center;padding:16px;border:2px solid rgba(243,197,71,.2);border-radius:14px;margin-bottom:10px;cursor:pointer;background:#fafafa;">
+                <input type="radio" name="payment_method_choice" value="online" style="width:18px;height:18px;accent-color:#f3c547;">
+                <i class="fas fa-credit-card" style="font-size:22px;color:#f3c547;"></i>
+                <span><strong>Online Payment</strong><small style="display:block;color:#888;">GCash / Bank transfer</small></span>
+            </label>
+            <div id="gcashSection" style="display:none;margin-top:14px;padding:16px;border-radius:14px;background:rgba(243,197,71,.05);border:1px dashed rgba(243,197,71,.4);text-align:center;">
+                <p style="font-size:13px;color:#666;">After paying online, the supplier will be notified and can confirm your payment.</p>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
+                <button type="button" data-close-payment style="background:#eee;color:#333;padding:10px 20px;border:0;border-radius:10px;">Cancel</button>
+                <button type="button" id="confirmPayment" style="background:linear-gradient(135deg,#ffe27d,#f3c547);color:#111;padding:10px 20px;border:0;border-radius:10px;">Confirm Payment</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
         const statusModal = document.getElementById('statusModal');
         const statusContent = document.getElementById('statusContent');
+        const paymentModal = document.getElementById('paymentModal');
+        let paymentContext = null;
+
+        const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
+        const statusKey = value => String(value ?? '').toLowerCase().replace(/\s+/g, '_');
 
         document.querySelectorAll('[data-status-event]').forEach(button => button.addEventListener('click', async () => {
             statusModal.classList.add('show');
             statusModal.setAttribute('aria-hidden', 'false');
             statusContent.innerHTML = '<p class="modal-loading">Loading service status...</p>';
-            const response = await fetch(`{{ url('/your-events') }}/${button.dataset.statusEvent}/status`, {headers: {'Accept': 'application/json'}});
-            const data = await response.json();
-            if (!data.services?.length) {
-                statusContent.innerHTML = '<p class="modal-loading">No services assigned yet.</p>';
-                return;
+            try {
+                const response = await fetch(`{{ url('/your-events') }}/${button.dataset.statusEvent}/status`, {headers: {'Accept': 'application/json'}});
+                const data = await response.json();
+                if (!response.ok || !data.services?.length) {
+                    statusContent.innerHTML = '<p class="modal-loading">No services assigned yet.</p>';
+                    return;
+                }
+                const totalToPay = data.services.reduce((total, service) => {
+                    const key = statusKey(service.status);
+                    const isUnpaid = !['paid', 'declined', 'proposal_declined'].includes(key);
+                    return isUnpaid && Number(service.price) > 0
+                        ? total + Number(service.price)
+                        : total;
+                }, 0);
+                const totalHtml = totalToPay > 0
+                    ? `<div class="payment-info"><h3>Total to be paid:</h3><p style="font-size:22px;">₱${totalToPay.toLocaleString()}</p><small style="color:#888;">Payments are processed per service. Pay each accepted supplier directly from this list.</small></div>`
+                    : '';
+                statusContent.innerHTML = `<div class="status-table">${data.services.map(service => {
+                    const key = statusKey(service.status);
+                    const badgeClass = key === 'pending_confirmation' ? 'pending' : key.replace(/_/g, '-');
+                    const canPay = ['accepted', 'proposal_accepted', 'payment_pending'].includes(key);
+                    const messageUrl = service.supplier_user_id ? `{{ url('/messages') }}?event_id=${button.dataset.statusEvent}&user_id=${service.supplier_user_id}` : `{{ url('/messages') }}?event_id=${button.dataset.statusEvent}`;
+                    return `<div class="status-row"><div><strong>${escapeHtml(service.name)}</strong><small>${escapeHtml(service.type)}${service.price ? ` · ₱${Number(service.price).toLocaleString()}` : ''}</small></div><div class="status-actions"><span class="status-badge ${badgeClass}" >${escapeHtml(service.status)}</span>${canPay ? `<button class="pay-service" data-event="${button.dataset.statusEvent}" data-service="${escapeHtml(service.service_key)}" data-price="${Number(service.price || 0)}" data-name="${escapeHtml(service.name)}">Pay</button>` : ''}<a class="pay-service" href="${messageUrl}">Message</a></div></div>`;
+                }).join('')}</div>${totalHtml}`;
+                statusContent.querySelectorAll('.pay-service[data-service]').forEach(payButton => payButton.addEventListener('click', () => openPaymentModal(payButton)));
+            } catch (error) {
+                statusContent.innerHTML = '<p class="modal-loading">Error loading service status.</p>';
             }
-            statusContent.innerHTML = `<div class="status-table">${data.services.map(service => `<div class="status-row"><div><strong>${service.name}</strong><small>${service.type}${service.price ? ` · ₱${Number(service.price).toLocaleString()}` : ''}</small></div><div class="status-actions"><span class="status-badge ${String(service.status).toLowerCase().replace(/\s+/g, '-')} ">${service.status}</span>${['accepted', 'proposal_accepted'].includes(String(service.status).toLowerCase()) ? `<button class="pay-service" data-event="${button.dataset.statusEvent}" data-service="${service.service_key}">Pay</button>` : ''}</div></div>`).join('')}</div>`;
-            statusContent.querySelectorAll('.pay-service').forEach(payButton => payButton.addEventListener('click', () => payService(payButton)));
         }));
 
-        async function payService(button) {
-            const method = window.prompt('Enter payment method: cash or online', 'cash');
-            if (!['cash', 'online'].includes(method)) return;
-            const response = await fetch(`{{ url('/your-events') }}/${button.dataset.event}/pay`, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'}, body: JSON.stringify({service_type: button.dataset.service, payment_method: method})});
-            if (response.ok) window.location.reload();
+        function openPaymentModal(button) {
+            paymentContext = {event: button.dataset.event, service: button.dataset.service};
+            document.getElementById('payServiceName').textContent = button.dataset.name;
+            document.getElementById('payAmount').textContent = `₱${Number(button.dataset.price || 0).toLocaleString()}`;
+            document.querySelectorAll('input[name="payment_method_choice"]').forEach(input => { input.checked = false; });
+            document.getElementById('gcashSection').style.display = 'none';
+            paymentModal.classList.add('show');
+            paymentModal.setAttribute('aria-hidden', 'false');
         }
 
         document.querySelector('[data-close-modal]').addEventListener('click', closeModal);
         statusModal.addEventListener('click', event => { if (event.target === statusModal) closeModal(); });
         function closeModal() { statusModal.classList.remove('show'); statusModal.setAttribute('aria-hidden', 'true'); }
+
+        document.querySelectorAll('[data-close-payment]').forEach(button => button.addEventListener('click', closePaymentModal));
+        paymentModal.addEventListener('click', event => { if (event.target === paymentModal) closePaymentModal(); });
+        document.querySelectorAll('input[name="payment_method_choice"]').forEach(input => input.addEventListener('change', event => {
+            document.getElementById('gcashSection').style.display = event.target.value === 'online' ? 'block' : 'none';
+        }));
+        document.getElementById('confirmPayment').addEventListener('click', async () => {
+            const method = document.querySelector('input[name="payment_method_choice"]:checked');
+            if (!method || !paymentContext) return alert('Please choose a payment method.');
+            const confirmButton = document.getElementById('confirmPayment');
+            confirmButton.disabled = true;
+            try {
+                const response = await fetch(`{{ url('/your-events') }}/${paymentContext.event}/pay`, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json'}, body: JSON.stringify({service_type: paymentContext.service, payment_method: method.value})});
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Payment could not be recorded.');
+                }
+                window.location.reload();
+            } catch (error) {
+                alert(error.message);
+                confirmButton.disabled = false;
+            }
+        });
+        function closePaymentModal() { paymentModal.classList.remove('show'); paymentModal.setAttribute('aria-hidden', 'true'); paymentContext = null; }
     </script>
 </body>
 </html>

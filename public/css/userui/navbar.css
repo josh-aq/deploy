@@ -32,7 +32,8 @@
     flex-wrap: wrap;
 }
 
-.userui-nav-links a {
+.userui-nav-links a,
+.userui-nav-links > span:not(.userui-welcome):not(.userui-profile) {
     padding: 10px 13px;
     border: 1px solid transparent;
     border-radius: 10px;
@@ -41,16 +42,21 @@
     font-size: 13px;
     font-weight: 600;
     text-decoration: none;
-    cursor: pointer;
+    cursor: default;
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .userui-nav-links a:hover,
-.userui-nav-links a.active {
+.userui-nav-links a.active,
+.userui-nav-links > span.active {
     border-color: #e0b536;
     background: #f6c84c;
     color: #242a2f;
     box-shadow: none;
+}
+
+.userui-nav-links a {
+    cursor: pointer;
 }
 
 .userui-welcome {

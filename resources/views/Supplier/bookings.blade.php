@@ -150,7 +150,7 @@
                             <button onclick="openDeclineModal({{ $r['event_id'] }}, '{{ $r['service_key'] }}')" class="decline-btn" style="margin-left: 4px;">
                                 Decline
                             </button>
-                        @elseif($r['status'] === 'Payment Pending')
+                        @elseif($r['status'] === 'Pending Confirmation')
                             <button onclick="acceptSupplierPayment({{ $r['event_id'] }}, '{{ $r['service_key'] }}')" class="accept-btn">
                                 Receive Payment
                             </button>

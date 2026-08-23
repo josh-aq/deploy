@@ -382,7 +382,7 @@ $coordinators = $stmt->fetchAll();
             <p><?= esc($coordinator['business_address'] ?: 'Professional event coordinator with extensive experience in managing all types of events.') ?></p>
             <div class="footer">
               <div class="price"><?= $coordinator['min_package'] ? '₱' . number_format((float)$coordinator['min_package']) : 'View Profile' ?></div>
-              <a href="orgbio.php?coordinator_id=<?= $coordinator['user_id'] ?>" class="select-btn">Select</a>
+              <a href="<?= url('/event-coordinators/' . (int) $coordinator['user_id']) ?>" class="select-btn">Select</a>
             </div>
           </div>
         </div>

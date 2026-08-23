@@ -791,7 +791,7 @@ function showServiceStatus(eventId) {
         });
         if (total > 0) {
           html += `<div class="payment-info">
-            <h3><i class="fas fa-coins"></i> Total to be Paid</h3>
+            <h3>Total to be paid:</h3>
             <p style="font-size: 22px;">₱${total.toLocaleString()}</p>
             <small style="color:#888;">Payments are processed per service. Pay each accepted supplier directly from this list.</small>
           </div>`;

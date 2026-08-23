@@ -903,6 +903,7 @@ function buildMapUrl($address) {
     const mainImage = document.getElementById('mainVenueImage');
     const currentVenueSlug = '<?= esc($venueSlug) ?>';
     const currentVenueTitle = '<?= esc($selectedVenue['title'] ?? '') ?>';
+    const currentVenuePrice = <?= (float)str_replace(',', '', $selectedVenue['price'] ?? 25000) ?>;
 
     venueImages.forEach(function(thumbnail) {
       thumbnail.addEventListener('click', function() {
@@ -976,6 +977,7 @@ function buildMapUrl($address) {
           service: 'venue',
           venue: normalizedVenue,
           venue_name: normalizedVenue,
+          price: currentVenuePrice,
         };
         if (selectedAddonKeys.length > 0) {
           message.addons = selectedAddonKeys;

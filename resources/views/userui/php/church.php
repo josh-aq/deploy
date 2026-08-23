@@ -92,7 +92,7 @@ function getChurchGallery($index) {
         <h3><?= esc($service['name'] ?? 'Church') ?></h3>
         <p><?= esc($service['supplier_name'] ?? '') ?></p>
         <div class="footer">
-          <button class="select-btn" data-name="<?= esc($service['name']) ?>" data-type="church">Select</button>
+          <button class="select-btn" data-name="<?= esc($service['name']) ?>" data-type="church" data-price="<?= (float)($service['price'] ?? 5000) ?>">Select</button>
           <a class="view-btn" href="?service_id=<?= esc($service['service_id'] ?? $service['id'] ?? '') ?>&<?= $preserveQuery ?>">Details</a>
         </div>
       </div>
@@ -101,12 +101,12 @@ function getChurchGallery($index) {
     <?php endif; ?>
   </div>
 <script>
-function selectService(serviceName, serviceType) {
+function selectService(serviceName, serviceType, servicePrice) {
   const params = new URLSearchParams(window.location.search);
   const from = params.get('from');
   const isModal = params.get('modal') === 'true';
   if (from === 'createevent') {
-    const message = { type: 'serviceSelected', service: serviceType };
+    const message = { type: 'serviceSelected', service: serviceType, price: Number(servicePrice) };
     message[serviceType] = serviceName;
     if (isModal && window.parent && window.parent !== window) {
       window.parent.postMessage(message, '*');
@@ -125,7 +125,7 @@ function selectService(serviceName, serviceType) {
 document.querySelectorAll('.select-btn').forEach(function(btn){
   btn.addEventListener('click', function(){
     const name = this.dataset.name || 'Church';
-    selectService(name, this.dataset.type || 'church');
+    selectService(name, this.dataset.type || 'church', this.dataset.price);
   });
 });
 </script>

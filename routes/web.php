@@ -27,6 +27,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/recommendation', [\App\Http\Controllers\RecommendationController::class, 'index'])->name('recommendation');
     Route::post('/recommendation/generate', [\App\Http\Controllers\RecommendationController::class, 'generate'])->name('recommendation.generate');
     Route::get('/packages', [\App\Http\Controllers\PackageController::class, 'index'])->name('packages');
+    Route::get('/events/create', [App\Http\Controllers\EventController::class, 'create'])->name('events.create');
+    Route::post('/events', [App\Http\Controllers\EventController::class, 'store'])->name('events.store');
+    Route::get('/services/{service}/{serviceId}', [App\Http\Controllers\ServiceCatalogController::class, 'show'])->where('serviceId', '[0-9]+')->name('services.show');
+    Route::get('/services/{service}', [App\Http\Controllers\ServiceCatalogController::class, 'index'])->name('services.index');
+    Route::get('/event-coordinators', [\App\Http\Controllers\CoordinatorController::class, 'clientIndex'])->name('coordinators.index');
+    Route::get('/event-coordinator', fn () => redirect()->route('coordinators.index'));
+    Route::get('/event-coordinators/{coordinatorId}', [\App\Http\Controllers\CoordinatorController::class, 'clientShow'])->name('coordinators.show');
+    Route::post('/event-coordinators/{coordinatorId}/book', [\App\Http\Controllers\CoordinatorController::class, 'clientBook'])->name('coordinators.book');
+    Route::post('/event-coordinators/{coordinatorId}/custom-booking', [\App\Http\Controllers\CoordinatorController::class, 'clientCustomBooking'])->name('coordinators.custom-booking');
     Route::get('/your-events', [\App\Http\Controllers\YourEventsController::class, 'index'])->name('your.events');
     Route::get('/your-events/{eventId}/map', [App\Http\Controllers\YourEventsController::class, 'map'])->name('your.events.map');
     Route::match(['get', 'post'], '/your-events/{eventId}/guests', [App\Http\Controllers\YourEventsController::class, 'guests'])->name('your.events.guests');
@@ -82,7 +91,9 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('supplier.feed');
     })->name('supplier.newsfeed');
 
-    Route::get('/supplier/feed', [\App\Http\Controllers\SupplierFeedController::class, 'index'])->name('supplier.feed');
+    Route::get('/supplier/feed', function () {
+        return redirect()->route('newsfeed');
+    })->name('supplier.feed');
         Route::get('/admin', [\App\Http\Controllers\AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::post('/admin/users', [\App\Http\Controllers\AdminController::class, 'createUser'])->name('admin.users.store');
         Route::get('/admin/requests', [\App\Http\Controllers\AdminController::class, 'requests'])->name('admin.requests');
@@ -90,6 +101,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/summary', [\App\Http\Controllers\AdminController::class, 'legacyDashboard'])->name('admin.legacy');
 
         Route::get('/coordinator', [\App\Http\Controllers\CoordinatorController::class, 'dashboard'])->name('coordinator.dashboard');
+        Route::get('/coordinator/newsfeed', [\App\Http\Controllers\NewsfeedController::class, 'coordinator'])->name('coordinator.newsfeed');
         Route::get('/coordinator/events', [\App\Http\Controllers\CoordinatorController::class, 'events'])->name('coordinator.events');
         Route::patch('/coordinator/events/{eventId}', [\App\Http\Controllers\CoordinatorController::class, 'updateEvent'])->name('coordinator.events.update');
         Route::get('/coordinator/packages', [\App\Http\Controllers\CoordinatorController::class, 'packages'])->name('coordinator.packages');

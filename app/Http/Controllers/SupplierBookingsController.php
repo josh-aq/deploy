@@ -91,7 +91,7 @@ class SupplierBookingsController extends Controller
         if ($statusFilter !== 'all') {
             $bookingRows = array_filter($bookingRows, function ($row) use ($statusFilter) {
                 if ($statusFilter === 'accepted') {
-                    return in_array($row['status'], ['accepted', 'Payment Pending', 'Paid'], true);
+                    return in_array($row['status'], ['accepted', 'Payment Pending', 'Pending Confirmation', 'Paid'], true);
                 }
                 if ($statusFilter === 'Paid') {
                     return $row['status'] === 'Paid';

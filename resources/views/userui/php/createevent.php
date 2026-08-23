@@ -696,6 +696,50 @@ if (($fromPackage = trim($_GET['from'] ?? '')) === 'package') {
       border-radius: 14px;
     }
 
+    #reviewModal .modal-dialog {
+      width: min(620px, 100%);
+    }
+
+    .review-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .review-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      border: 1px solid rgba(212,160,23,0.16);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.82);
+    }
+
+    .review-row small {
+      display: block;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .review-price {
+      color: var(--gold);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .review-total {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 2px solid rgba(212,160,23,0.2);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
     .modal-body .card {
       padding: 24px;
       box-shadow: none;
@@ -816,7 +860,7 @@ if (($fromPackage = trim($_GET['from'] ?? '')) === 'package') {
       <span class="step-pill" data-step="2">2. Schedule</span>
       <span class="step-pill" data-step="3">3. Services</span>
     </div>
-    <form action="save_event.php" method="POST" onsubmit="syncSelectionsToForm()">
+    <form action="save_event.php" method="POST" novalidate onsubmit="syncSelectionsToForm()">
     <input type="hidden" name="venue" id="selectedVenue">
     <input type="hidden" name="venue_name" id="selectedVenueName">
     <input type="hidden" name="clothes" id="selectedClothes">
@@ -1007,7 +1051,24 @@ if (($fromPackage = trim($_GET['from'] ?? '')) === 'package') {
 
             <div class="footer-actions">
               <button type="button" class="cancel-btn" onclick="goBackToEventModal()">Back</button>
-              <button type="submit" class="create-btn">Create Event</button>
+              <button type="button" class="create-btn" onclick="openReviewModal()">Create Event</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="reviewModal" role="dialog" aria-modal="true" aria-label="Review selected services">
+      <div class="modal-dialog">
+        <div class="modal-body">
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-receipt"></i> Review Selected Services</div>
+            <p style="color:var(--muted);line-height:1.6;">Review the services you chose and their estimated prices before creating your event.</p>
+            <div id="reviewServiceList" class="review-list"></div>
+            <div class="review-total"><span>Total</span><span id="reviewTotal">₱0.00</span></div>
+            <div class="modal-actions">
+              <button type="button" class="secondary-btn" onclick="closeModal('reviewModal')">Back</button>
+              <button type="button" class="primary-btn" onclick="confirmCreateEvent()">Confirm & Create Event</button>
             </div>
           </div>
         </div>
@@ -1017,6 +1078,95 @@ if (($fromPackage = trim($_GET['from'] ?? '')) === 'package') {
   </div>
 
 <script>
+
+const selectedServicePrices = {};
+const serviceLabels = {
+  venue: 'Venue',
+  clothes: 'Clothes',
+  catering: 'Food & Catering',
+  host: 'Host',
+  church: 'Church',
+  sounds_lights: 'Sounds & Lights',
+  photographer: 'Photographer',
+  rental_car: 'Rental Car'
+};
+
+function setSelectedServicePrice(service, price) {
+  const numericPrice = Number(price);
+  if (!service || !Number.isFinite(numericPrice) || numericPrice < 0) return;
+  selectedServicePrices[service] = numericPrice;
+  try {
+    sessionStorage.setItem('event_selection_price_' + service, String(numericPrice));
+  } catch (err) {
+    console.warn('Could not persist service price', err);
+  }
+}
+
+function getSelectedServicePrice(service) {
+  if (Number.isFinite(selectedServicePrices[service])) return selectedServicePrices[service];
+  try {
+    const storedPrice = Number(sessionStorage.getItem('event_selection_price_' + service));
+    if (Number.isFinite(storedPrice) && storedPrice >= 0) {
+      selectedServicePrices[service] = storedPrice;
+      return storedPrice;
+    }
+  } catch (err) {
+    console.warn('Could not restore service price', err);
+  }
+  return null;
+}
+
+function escapeReviewText(value) {
+  return String(value || '').replace(/[&<>'"]/g, function(character) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character];
+  });
+}
+
+function openReviewModal() {
+  const eventForm = document.querySelector('form[action="save_event.php"]');
+  if (!eventForm || !eventForm.checkValidity()) {
+    closeModal('servicesModal');
+    openModal('eventModal');
+    alert('Please complete all highlighted event details before creating your event.');
+    return;
+  }
+  syncSelectionsToForm();
+  const reviewList = document.getElementById('reviewServiceList');
+  const reviewTotal = document.getElementById('reviewTotal');
+  const selectedChecks = Array.from(document.querySelectorAll('.service-check:checked'));
+  let total = 0;
+
+  if (selectedChecks.length === 0) {
+    reviewList.innerHTML = '<div class="review-row"><span>No services selected.</span></div>';
+  } else {
+    reviewList.innerHTML = selectedChecks.map(function(checkbox) {
+      const service = checkbox.value;
+      const nameInput = document.getElementById('selected' + service.split('_').map(function(part) {
+        return part.charAt(0).toUpperCase() + part.slice(1);
+      }).join(''));
+      const selectedName = nameInput ? nameInput.value : '';
+      const name = selectedName || serviceLabels[service] || service;
+      const price = getSelectedServicePrice(service);
+      if (price !== null) total += price;
+      return '<div class="review-row"><div><strong>' + escapeReviewText(serviceLabels[service] || service) + '</strong><small>' + escapeReviewText(name) + '</small></div><span class="review-price">' + (price === null ? 'Price unavailable' : '₱' + price.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})) + '</span></div>';
+    }).join('');
+  }
+
+  reviewTotal.textContent = '₱' + total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  openModal('reviewModal');
+}
+
+function confirmCreateEvent() {
+  const eventForm = document.querySelector('form[action="save_event.php"]');
+  if (!eventForm || !eventForm.checkValidity()) {
+    closeModal('reviewModal');
+    openModal('eventModal');
+    alert('Please complete all highlighted event details before creating your event.');
+    return;
+  }
+  syncSelectionsToForm();
+  if (eventForm) eventForm.submit();
+}
 
   function toggleOtherInput() {
   const selected = document.querySelector('input[name="event_type"]:checked');
@@ -1475,6 +1625,8 @@ syncSelectionsToForm();
 window.addEventListener('message', function(e) {
   if (e.data && e.data.type === 'serviceSelected') {
     const service = e.data.service;
+
+    setSelectedServicePrice(service, e.data.price);
 
     const checkbox = document.getElementById('check-' + service);
     if (checkbox) {

@@ -73,7 +73,7 @@ body:after {
   width: var(--side);
   min-width: var(--side);
   height: 100vh;
-  padding: 24px 18px;
+  padding: 16px 18px;
   background: rgba(255, 255, 255, 0.95);
   border-right: 1px solid var(--border);
   backdrop-filter: blur(16px);
@@ -82,22 +82,23 @@ body:after {
   top: 0;
   left: 0;
   z-index: 10;
-  overflow-y: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .brand {
-  padding: 6px 4px 24px;
+  padding: 4px 4px 16px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 22px;
+  margin-bottom: 14px;
 }
 
 .brand h1 {
   font-size: 28px;
   font-weight: 900;
   letter-spacing: 1px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .blue-text,
@@ -107,7 +108,7 @@ body:after {
 
 .user-info {
   display: grid;
-  gap: 8px;
+  gap: 5px;
   color: var(--text);
   font-size: 15px;
 }
@@ -117,7 +118,7 @@ body:after {
   align-items: center;
   gap: 8px;
   width: fit-content;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: rgba(212, 175, 55, 0.1);
   border: 1px solid rgba(212, 175, 55, 0.25);
@@ -136,7 +137,7 @@ body:after {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
 }
 

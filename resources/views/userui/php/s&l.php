@@ -597,7 +597,7 @@ function getSoundLightsGallery($index) {
               <strong><?= esc($selectedService['style'] ?? 'Concert & Stage') ?></strong>
             </div>
           </div>
-          <button class="select-btn" onclick="selectService('<?= esc(addslashes($selectedService['name'])) ?>','sounds_lights')">Book Service</button>
+          <button class="select-btn" onclick="selectService('<?= esc(addslashes($selectedService['name'])) ?>','sounds_lights', <?= (float)($selectedService['price'] ?? 18500) ?>)">Book Service</button>
           <div class="thumbnail-row">
             <?php for ($i = 0; $i < 4; $i++): ?>
               <div class="thumbnail">
@@ -661,12 +661,12 @@ function getSoundLightsGallery($index) {
   </div>
 
 <script>
-function selectService(serviceName, serviceType) {
+function selectService(serviceName, serviceType, servicePrice) {
   const params = new URLSearchParams(window.location.search);
   const from = params.get('from');
   const isModal = params.get('modal') === 'true';
   if (from === 'createevent') {
-    const message = { type: 'serviceSelected', service: serviceType };
+    const message = { type: 'serviceSelected', service: serviceType, price: Number(servicePrice) };
     message[serviceType] = serviceName;
     if (isModal && window.parent && window.parent !== window) {
       window.parent.postMessage(message, '*');

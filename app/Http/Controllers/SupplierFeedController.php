@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\FirebaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class SupplierFeedController extends Controller
 {
-    public function __construct()
+    public function __construct(private FirebaseService $firebase)
     {
         $this->middleware('auth');
         $this->middleware(function ($request, $next) {
@@ -21,44 +22,47 @@ class SupplierFeedController extends Controller
 
     public function index()
     {
-        $userId = Auth::id();
+        $allComments = collect($this->firebase->getNewsfeedComments());
+        $posts = collect($this->firebase->getNewsfeedPosts())
+            ->sortByDesc(fn (array $post) => $post['created_at'] ?? '')
+            ->values();
+        $likes = $this->firebase->getNewsfeedLikes();
 
-        $feedItems = DB::table('supplier_services as s')
-            ->join('users as u', 's.user_id', '=', 'u.user_id')
-            ->where('s.user_id', $userId)
-            ->select('s.*', 'u.full_name', 'u.business_name')
-            ->orderByDesc('s.created_at')
-            ->limit(10)
-            ->get();
+        $userIds = $posts->pluck('user_id')
+            ->merge($allComments->pluck('user_id'))
+            ->filter()
+            ->unique()
+            ->values();
+        $users = $userIds->isEmpty()
+            ? collect()
+            : DB::table('users')->whereIn('user_id', $userIds)->get()->keyBy('user_id');
 
-        $bookingItems = DB::table('bookings as b')
-            ->join('events as e', 'b.event_id', '=', 'e.event_id')
-            ->join('supplier_services as s', 'b.service_id', '=', 's.service_id')
-            ->where('s.user_id', $userId)
-            ->select('b.*', 'e.title as event_title', 's.name as service_name', 'e.event_date')
-            ->orderByDesc('b.created_at')
-            ->limit(5)
-            ->get();
+        $posts = $posts->map(function (array $post) use ($allComments, $likes, $users) {
+            $post['image_path'] = $post['image_path'] ?? null;
+            $post['full_name'] = $this->displayName($users->get($post['user_id']));
+            $post['likes_count'] = isset($likes[$post['post_id']]) && is_array($likes[$post['post_id']])
+                ? count($likes[$post['post_id']])
+                : 0;
+            $post['comments_count'] = $allComments->where('post_id', $post['post_id'])->count();
 
-        $serviceCount = DB::table('supplier_services')->where('user_id', $userId)->count();
-        $pendingCount = DB::table('bookings as b')
-            ->join('supplier_services as s', 'b.service_id', '=', 's.service_id')
-            ->where('s.user_id', $userId)
-            ->where('b.status', 'pending')
-            ->count();
+            return (object) $post;
+        });
 
-        $approvedCount = DB::table('bookings as b')
-            ->join('supplier_services as s', 'b.service_id', '=', 's.service_id')
-            ->where('s.user_id', $userId)
-            ->where('b.status', 'accepted')
-            ->count();
+        $comments = $allComments->groupBy('post_id')->map(fn ($postComments) => collect($postComments)->map(function (array $comment) use ($users) {
+            $comment['full_name'] = $this->displayName($users->get($comment['user_id']));
+            return (object) $comment;
+        }));
 
-        return view('supplier.feed', [
-            'feedItems' => $feedItems,
-            'bookingItems' => $bookingItems,
-            'serviceCount' => $serviceCount,
-            'pendingCount' => $pendingCount,
-            'approvedCount' => $approvedCount,
-        ]);
+        $likedPostIds = collect($likes)
+            ->filter(fn ($usersForPost) => is_array($usersForPost) && array_key_exists((string) auth()->id(), $usersForPost))
+            ->keys()
+            ->all();
+
+        return view('supplier.feed', compact('posts', 'comments', 'likedPostIds'));
+    }
+
+    private function displayName($user): string
+    {
+        return $user?->full_name ?: $user?->name ?: $user?->username ?: 'EventIntel member';
     }
 }

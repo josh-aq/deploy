@@ -15,42 +15,14 @@ class NewsfeedController extends Controller
 
     public function index()
     {
-        $allComments = collect($this->firebase->getNewsfeedComments());
-        $posts = collect($this->firebase->getNewsfeedPosts())
-            ->sortByDesc(fn (array $post) => $post['created_at'] ?? '')
-            ->values();
-        $likes = $this->firebase->getNewsfeedLikes();
+        return view('userui.newsfeed', $this->feedViewData());
+    }
 
-        $userIds = $posts->pluck('user_id')
-            ->merge($allComments->pluck('user_id'))
-            ->filter()
-            ->unique()
-            ->values();
-        $users = $userIds->isEmpty()
-            ? collect()
-            : DB::table('users')->whereIn('user_id', $userIds)->get()->keyBy('user_id');
+    public function coordinator()
+    {
+        abort_unless(auth()->user()->role === 'coordinator', 403, 'Coordinator access only.');
 
-        $posts = $posts->map(function (array $post) use ($allComments, $likes, $users) {
-            $post['image_path'] = $post['image_path'] ?? null;
-            $post['full_name'] = $this->displayName($users->get($post['user_id']));
-            $post['likes_count'] = isset($likes[$post['post_id']]) && is_array($likes[$post['post_id']])
-                ? count($likes[$post['post_id']])
-                : 0;
-            $post['comments_count'] = $allComments->where('post_id', $post['post_id'])->count();
-            return (object) $post;
-        });
-
-        $comments = $allComments->groupBy('post_id')->map(fn ($postComments) => collect($postComments)->map(function (array $comment) use ($users) {
-            $comment['full_name'] = $this->displayName($users->get($comment['user_id']));
-            return (object) $comment;
-        }));
-
-        $likedPostIds = collect($likes)
-            ->filter(fn ($usersForPost) => is_array($usersForPost) && array_key_exists((string) auth()->id(), $usersForPost))
-            ->keys()
-            ->all();
-
-        return view('userui.newsfeed', compact('posts', 'comments', 'likedPostIds'));
+        return view('coordinator.newsfeed', $this->feedViewData());
     }
 
     public function store(Request $request)
@@ -116,5 +88,45 @@ class NewsfeedController extends Controller
     private function displayName($user): string
     {
         return $user?->full_name ?: $user?->name ?: $user?->username ?: 'EventIntel member';
+    }
+
+    private function feedViewData(): array
+    {
+        $allComments = collect($this->firebase->getNewsfeedComments());
+        $posts = collect($this->firebase->getNewsfeedPosts())
+            ->sortByDesc(fn (array $post) => $post['created_at'] ?? '')
+            ->values();
+        $likes = $this->firebase->getNewsfeedLikes();
+
+        $userIds = $posts->pluck('user_id')
+            ->merge($allComments->pluck('user_id'))
+            ->filter()
+            ->unique()
+            ->values();
+        $users = $userIds->isEmpty()
+            ? collect()
+            : DB::table('users')->whereIn('user_id', $userIds)->get()->keyBy('user_id');
+
+        $posts = $posts->map(function (array $post) use ($allComments, $likes, $users) {
+            $post['image_path'] = $post['image_path'] ?? null;
+            $post['full_name'] = $this->displayName($users->get($post['user_id']));
+            $post['likes_count'] = isset($likes[$post['post_id']]) && is_array($likes[$post['post_id']])
+                ? count($likes[$post['post_id']])
+                : 0;
+            $post['comments_count'] = $allComments->where('post_id', $post['post_id'])->count();
+            return (object) $post;
+        });
+
+        $comments = $allComments->groupBy('post_id')->map(fn ($postComments) => collect($postComments)->map(function (array $comment) use ($users) {
+            $comment['full_name'] = $this->displayName($users->get($comment['user_id']));
+            return (object) $comment;
+        }));
+
+        $likedPostIds = collect($likes)
+            ->filter(fn ($usersForPost) => is_array($usersForPost) && array_key_exists((string) auth()->id(), $usersForPost))
+            ->keys()
+            ->all();
+
+        return compact('posts', 'comments', 'likedPostIds');
     }
 }

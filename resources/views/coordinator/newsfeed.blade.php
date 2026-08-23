@@ -1,4 +1,4 @@
-@extends('supplier.layout')
+@extends('coordinator.layout')
 
 @section('title', 'EventIntel - Newsfeed')
 
@@ -65,7 +65,7 @@
                 <footer class="post-footer">
                     <button class="like-button {{ in_array($post->post_id, $likedPostIds) ? 'liked' : '' }}" data-post-id="{{ $post->post_id }}"><i class="{{ in_array($post->post_id, $likedPostIds) ? 'fas' : 'far' }} fa-heart"></i> <span class="like-label">{{ in_array($post->post_id, $likedPostIds) ? 'Unlike' : 'Like' }}</span> <span class="like-count">{{ $post->likes_count }}</span></button>
                     <span><i class="far fa-comment" aria-hidden="true"></i> <span class="comment-count">{{ $post->comments_count }}</span> comments</span>
-                    <button type="button" class="share-button" data-url="{{ url('/supplier/feed') }}#post-{{ $post->post_id }}"><i class="far fa-share" aria-hidden="true"></i> Share</button>
+                    <button type="button" class="share-button" data-url="{{ url('/coordinator/newsfeed') }}#post-{{ $post->post_id }}"><i class="far fa-share" aria-hidden="true"></i> Share</button>
                 </footer>
             </article>
         @empty

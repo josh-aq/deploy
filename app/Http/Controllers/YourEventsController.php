@@ -185,7 +185,7 @@ class YourEventsController extends Controller
         $statusColumn = $data['service_type'] === 'sounds_lights' ? 'soundsnlights_status' : $data['service_type'] . '_status';
 
         DB::table('events')->where('event_id', $event->event_id)->update([
-            $statusColumn => 'Payment Pending',
+            $statusColumn => 'Pending Confirmation',
             'payment_method' => $data['payment_method'],
             'payment_status' => 'pending',
         ]);

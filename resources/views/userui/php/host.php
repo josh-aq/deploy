@@ -596,7 +596,7 @@ function getHostGallery($index) {
               <strong><?= esc($selectedService['style'] ?? 'Interactive') ?></strong>
             </div>
           </div>
-          <button class="select-btn" onclick="selectService('<?= esc(addslashes($selectedService['name'])) ?>','host')">Book Service</button>
+          <button class="select-btn" onclick="selectService('<?= esc(addslashes($selectedService['name'])) ?>','host', <?= (float)($selectedService['price'] ?? 5000) ?>)">Book Service</button>
         </div>
       </div>
     <?php endif; ?>
@@ -653,12 +653,12 @@ function getHostGallery($index) {
   </div>
 
 <script>
-function selectService(serviceName, serviceType) {
+function selectService(serviceName, serviceType, servicePrice) {
   const params = new URLSearchParams(window.location.search);
   const from = params.get('from');
   const isModal = params.get('modal') === 'true';
   if (from === 'createevent') {
-    const message = { type: 'serviceSelected', service: serviceType };
+    const message = { type: 'serviceSelected', service: serviceType, price: Number(servicePrice) };
     message[serviceType] = serviceName;
     if (isModal && window.parent && window.parent !== window) {
       window.parent.postMessage(message, '*');

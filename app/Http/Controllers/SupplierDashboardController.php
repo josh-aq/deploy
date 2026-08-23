@@ -71,7 +71,7 @@ class SupplierDashboardController extends Controller
 
                     if (in_array($status, ['pending'], true)) {
                         $stats['pending']++;
-                    } elseif (in_array($status, ['accepted', 'Payment Pending', 'Paid'], true)) {
+                    } elseif (in_array($status, ['accepted', 'Payment Pending', 'Pending Confirmation', 'Paid'], true)) {
                         $stats['accepted']++;
                     } elseif (in_array($status, ['declined', 'rejected'], true)) {
                         $stats['rejected']++;

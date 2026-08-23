@@ -201,7 +201,7 @@ if (!isVenueAvailable($pdo, $venue_name, $date, $time, $event_end_time)) {
   exit;
 }
 
-$fields = ['user_id','title','event_type','theme','budget','event_date','event_time','guest_count','venue_name','clothes','catering','host','photographer','soundsnlights','status','payment_method','payment_status'];
+$fields = ['user_id','title','event_type','theme','budget','event_date','event_time','guest_count','venue_name','clothes','catering','host','photographer','soundsnlights','coordinator_package','status','payment_method','payment_status'];
 $values = [
   $_SESSION['user_id'],
   $title,
@@ -217,6 +217,7 @@ $values = [
   $host,
   $photographer,
   $sounds_lights,
+  '',
   'planning',
   $payment_method,
   'pending'

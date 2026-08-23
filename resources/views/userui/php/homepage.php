@@ -435,7 +435,7 @@ require_login();
         'Photographer': 'photographers.php',
         'Catering': 'catering.php',
         'Host / MC': 'host.php',
-        'Event Coordinator': 'eventcoor.php',
+        'Event Coordinator': '<?= url('/event-coordinators') ?>',
         'Venue': 'venue.php',
         'Stylist': 'clothing.php',
         'Lights & Sound': 's&l.php'
@@ -496,7 +496,7 @@ require_login();
       <p>Organize memorable events, connect with professional coordinators, and receive intelligent recommendations tailored to your needs.</p>
       <div class="button-group">
         <button class="action-btn primary" onclick="window.location.href='createevent.php'">Create an Event</button>
-        <button class="action-btn" onclick="window.location.href='eventcoor.php'">Find an Event Coordinator</button>
+        <button class="action-btn" onclick="window.location.href='<?= url('/event-coordinators') ?>'">Find an Event Coordinator</button>
         <button class="action-btn" onclick="window.location.href='newsfeed.php'">View Supplier Newsfeed</button>
       </div>
     </section>
