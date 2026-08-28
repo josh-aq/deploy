@@ -68,3 +68,4 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 # laravel_studentmngt
 # janclyde_stdmngt
 # janclyde_stdmngt
+# deploy
