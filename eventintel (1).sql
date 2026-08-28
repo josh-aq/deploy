@@ -1,13 +1,15 @@
--- phpMyAdmin SQL Dump
+                                                                        -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 23, 2026 at 05:27 PM
+-- Generation Time: Aug 23, 2026 at 05:27 PM1
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+CREATE DATABASE IF NOT EXISTS `eventintel`;
+USE `eventintel`;
 START TRANSACTION;
 SET time_zone = "+00:00";
 
@@ -177,7 +179,7 @@ CREATE TABLE `events` (
   `photographer_status` varchar(50) DEFAULT 'pending',
   `coordinator` varchar(255) DEFAULT NULL,
   `coordinator_package` varchar(255) NOT NULL,
-  `coordinator_status` varchar(255) DEFAULT 'pending',
+`coordinator_status` varchar(255) DEFAULT 'pending',
   `coordinator_proposal` text DEFAULT NULL,
   `payment_method` varchar(50) DEFAULT NULL,
   `payment_status` varchar(50) DEFAULT 'pending',
