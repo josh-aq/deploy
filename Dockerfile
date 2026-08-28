@@ -29,6 +29,8 @@ RUN composer install --no-dev --no-interaction --prefer-dist --no-scripts
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
 
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views
+
 RUN composer dump-autoload --optimize
 
 RUN chown -R www-data:www-data storage bootstrap/cache
