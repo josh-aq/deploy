@@ -8,6 +8,7 @@
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+DROP DATABASE IF EXISTS `eventintel`;
 CREATE DATABASE IF NOT EXISTS `eventintel`;
 USE `eventintel`;
 START TRANSACTION;
