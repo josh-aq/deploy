@@ -65,7 +65,7 @@ class LoginController extends Controller
             }
 
             if (($user->role ?? null) === 'supplier') {
-                return redirect('/supplier/DASHBOARD');
+                return redirect()->route('supplier.dashboard');
             }
 
             if (($user->role ?? null) === 'coordinator') {

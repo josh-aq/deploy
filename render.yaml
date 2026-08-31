@@ -13,6 +13,12 @@ services:
         value: "false"
       - key: APP_URL
         sync: false
+      - key: SESSION_DOMAIN
+        value: ""
+      - key: SESSION_SECURE_COOKIE
+        value: "false"
+      - key: SESSION_SAME_SITE
+        value: lax
       - key: APP_KEY
         sync: false
       - key: DB_CONNECTION
